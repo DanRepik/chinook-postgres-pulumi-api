@@ -1,0 +1,11 @@
+name: Chinook-API
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+description: Chinook API built using API-Foundry
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-python
