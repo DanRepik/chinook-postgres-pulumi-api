@@ -88,75 +88,129 @@ Next let's setup localtools.sh this is a script that streamlines development by 
 'localtools.sh' starts the Python virual environment and sets alias's to bring deployments up and down.  Additionally it includes operations to management the Localstack and Postgres development infrastructure.
 
 ```bash
-source venv/bin/activate
+# devtools.sh
 
+# api operations
 alias up="pulumi up --yes --stack local"
 alias down="pulumi destroy --yes --stack local"
 
 # import playground commands
 source "~/workspace/localstack_playground/devtools.sh"
 
-alias infra_up="playground_postgres; ./install_secrets.py"
+# playground operations
+alias infra_up="playground_postgres"
 alias infra_down="playground_down"
 alias infra_reset="playground_reset"
 ```
 
+Install the tools using;
 
-# Installation
-
-1. Install the Python modules.  The example uses Pipenv to manage python virtual environments and resources.  To install those resources run;
-
-```bash
-pipenv install
-```
-
-2. The devtools.sh file contains alias and settings that streamline develop activaties.  To initialize a terminal environment with the devtools.sh run;
 
 ```bash
 source devtools.sh
 ```
 
-create_secret_if_not_exists(
-    "postgres/chinook",
-    json.dumps(
-        {
-            "engine": "postgres",
-            "dbname": "chinook_auto_increment",
-            "username": "chinook_user",
-            "password": "chinook_password",
-            "host": "postgres_db",
-        }
-    ),
-)
+# Implementing the Chinook API
 
-# Developing the Chinook API
+To implement an API using API-Foundry, you need three key components:
 
-## Implement the API Specfication
+1. **API Specification:** Defines the structure and behavior of your API.
+2. **AWS Secret:** Contains the database connection configuration.
+3. **Deployment Code:** Combines the API specification and AWS secret as a Pulumi component for deployment.
+
+## Implement the API Specification
+
+The first step in developing an API with API-Foundry is to create the API specification document in the OpenAPI 3.0 format. In this document, you'll need to:
+
+* Create a corresponding component schema object for each database table you want to expose in the API.
+* Define any additional SQL queries that should be exposed as services within the specification's path object.
+
+> For comprehensive details on building API specifications, please refer to: [Documentation Link](> For comprehensive details on building API specifications, please refer to: [Building an API Definition](https://github.com/DanRepik/api_foundry?tab=readme-ov-file#building-an-api-definition)
+
+To streamline the process, the API-Foundry package includes a script `postgres_to_openapi` that generates a starter specification based on your database connection parameters.  You can modify the result of this script to build your API.
+
+> For complete information on using this utility see: [PostgreSQL Database Schemas](https://github.com/DanRepik/api_foundry?tab=readme-ov-file#postgresql-database-schemas) in the API-Foundry documentation.
+
+```bash
+# Needed to access the database in the scope of 
+# the utility
+pip install psycopg2-binary
+
+# generate and save the API specification
+postgres_to_openapi --host localhost \
+  --database chinook_auto_increment \
+  --user chinook_user \
+  --password chinook_password \
+  --schema public \
+  --output chinook_api.yaml
+```
+
+After running the `postgres_to_openapi` utility there should be a `chinook_api.yaml` file containing the a  best guess approximation of the API specification.  There's serval modifications let's make;
+
+First let's shorten the database name.  The Chinook repository offers multiple flavors of the database and this document is tried to one of them.  We can make that more generic by changing all occurences where the `x-af-database` attribute is set to `chinook_auto_increment` to `chinook`.
+
+Additionally the `postgres_to_openapi' utility can not recognize concurrency control columns.  These columns, like a last updated timestamp are used to avoid different clients from overwritting changes made by other clients.  Those will have to added. 
+
+For example the component schema `invoice` object has a `last_updated` property for this purpose.  We need to identify this property by adding the attribute;
+
+```yaml
+      x-af-concurrency-control: last_updated
+```
+
+
+By completing these steps, you've established the core of your API-Foundry implementation. The OpenAPI 3.0 specification document defines your API's interaction with the database. With the specification in place, you’re now set to configure deploy your API.
+
 
 ## Configure the Database Connection
 
+For API-Foundry deployments, the Lambda service relies on an AWS secret to retrieve the database connection details. In production, these secrets are usually managed by a system or database administrator. 
+
+However, during Localstack development, you need to manage these secrets locally. API-Foundry provides the `install_secret` script to simplify this process. This script safely installs the secret only if it doesn’t already exist, so you can run it multiple times without issue.
+
+```bash
+install_secret \
+  --secret-name "postgres/chinook" \
+  --engine postgres \
+  --host postgres_db \  # docker network host name
+  --database chinook_auto_increment \
+  --user chinook_user \
+  --password chinook_password \
+  --schema public
+```
+
+When resetting the Localstack playground this secret will be removed, and will need to be reinstalled. To streamline this process, you can include these commands in your `devtools.sh` file:
+
+```bash
+# devtools.sh
+
+# api operations
+alias up="pulumilocal up --yes --stack local"
+alias down="pulumilocal destroy --yes --stack local"
+
+# Import playground commands
+source "${HOME}/workspace/localstack_playground/devtools.sh"
+
+alias postgres_secret="install_secret --secret-name \"postgres/chinook\" \
+  --engine postgres \
+  --host postgres_db \
+  --database chinook_auto_increment \
+  --user chinook_user \
+  --password chinook_password \
+  --schema public"
+
+# playground operations
+alias infra_up="playground_postgres; postgres_secret"
+alias infra_down="playground_down"
+alias infra_reset="playground_reset"
+```
+
+This setup ensures that your infrastructure and secrets are configured correctly and efficiently each time you work with your local environment.
+
+
 ## Create the API
 
+Once the API specification and database connection configuration are set up, the next step is to create and deploy the API using Pulumi. This process will involve combining your API specification and AWS secret into a Pulumi component for deployment.
 
-## AWS Configuration
-
-In order to make deployments valid AWS credentials must be provided. The devtools.sh script sets AWS_PROFILE to 'localstack' by default however this can be overridden it needed.
-
-To deploy to Localstack you will need to add a 'localstack' profile to you AWS configuration.  To do that add the following to the '~/.aws/credentials' file;
-
-```
-[localstack]
-aws_access_key_id = test
-aws_secret_access_key = test
-```
-
-And to your '~/.aws/config' file add the following profile;
-
-```
-[profile localstack]
-region = us-east-1
-endpoint_url = http://localhost.localstack.cloud:4566
-```
 
 ## Dev Playground
 
