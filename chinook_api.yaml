@@ -10,8 +10,7 @@ components:
         artist_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the artist.
-          example: 1
+          description: Unique identifier for the artist. Read only
         name:
           type: string
           maxLength: 120
@@ -30,8 +29,7 @@ components:
         album_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the album.
-          example: 1
+          description: Unique identifier for the album. Read only
         title:
           type: string
           maxLength: 160
@@ -58,8 +56,7 @@ components:
         employee_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the employee.
-          example: 1
+          description: Unique identifier for the employee. Read only
         employee:
           $ref: '#/components/schemas/employee'
           x-af-parent-property: employee_id
@@ -122,8 +119,7 @@ components:
         invoice_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the invoice.
-          example: 1
+          description: Unique identifier for the invoice. Read only
         customer_id:
           type: integer
         customer:
@@ -173,8 +169,7 @@ components:
         genre_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the genre.
-          example: 1
+          description: Unique identifier for the genre. Read only
         name:
           type: string
           maxLength: 120
@@ -196,8 +191,7 @@ components:
         invoice_line_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the invoice_line.
-          example: 1
+          description: Unique identifier for the invoice_line. Read only
         invoice_id:
           type: integer
         invoice:
@@ -227,8 +221,7 @@ components:
         track_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the track.
-          example: 1
+          description: Unique identifier for the track. Read only
         name:
           type: string
           maxLength: 200
@@ -284,8 +277,7 @@ components:
         playlist_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the playlist.
-          example: 1
+          description: Unique identifier for the playlist. Read only
         name:
           type: string
           maxLength: 120
@@ -303,14 +295,14 @@ components:
       properties:
         playlist_id:
           type: integer
-          x-af-primary-key: true
+          x-af-primary-key: manual
         playlist:
           $ref: '#/components/schemas/playlist'
           x-af-parent-property: playlist_id
           description: Playlist associated with the playlist_track.
         track_id:
           type: integer
-          x-af-primary-key: true
+          x-af-primary-key: manual
         track:
           $ref: '#/components/schemas/track'
           x-af-parent-property: track_id
@@ -325,8 +317,7 @@ components:
         media_type_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the media_type.
-          example: 1
+          description: Unique identifier for the media_type. Read only
         name:
           type: string
           maxLength: 120
@@ -345,8 +336,7 @@ components:
         customer_id:
           type: integer
           x-af-primary-key: auto
-          description: Unique identifier for the customer.
-          example: 1
+          description: Unique identifier for the customer. Read only
         first_name:
           type: string
           maxLength: 40

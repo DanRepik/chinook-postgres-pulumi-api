@@ -11,7 +11,6 @@ Most of the development will be done locally, with the API deployed to a Localst
 
 * [Docker](https://www.docker.com) needs to be installed.
 * [Pulumi](https://www.pulumi.com) is required for deploying the API.
-* Clone the [Localstack Playground](https://github.com/DanRepik/localstack_playground) repository, which provides scripts for setting up a local development environment with Docker, including Localstack and databases running in Docker containers.
 
 # Project Setup
 
@@ -44,7 +43,9 @@ Update the `requirements.txt` file to include the necessary packages:
 
 - **api-foundry**: Contains the Pulumi component for building and deploying the API.
 - **pulumi-local**: Provides utilities for deploying to Localstack with Pulumi.
+- **localstack-playground** Localstack Playground is a Docker Compose setup with LocalStack and databases (Postgres, Oracle, MySQL) in containers, enabling local development and testing of AWS apps with RDBMS data.
 - **pytest**: A testing framework.
+- **requests**: Utilities for making HTTP requests.
 
 Here’s the full `requirements.txt`:
 
@@ -52,13 +53,16 @@ Here’s the full `requirements.txt`:
 pulumi>=3.0.0,<4.0.0
 pulumi-aws>=6.0.2,<7.0.0
 pulumi-local
+localstack-playground
 api-foundry
 pytest
+requests
 ```
 
 Activate the virtual environment and install the required packages using pip:
 
 ```bash
+python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -83,24 +87,22 @@ pulumilocal down -y
 
 ## localtools.sh (optional)
 
-Next let's setup localtools.sh this is a script that streamlines development by providing a set of alias's for common operations.
+Next let's setup localtools.sh this is a script that streamlines development by providing a set of alias's for common command line operations.  This file optional and just provides shortcuts.
 
-'localtools.sh' starts the Python virual environment and sets alias's to bring deployments up and down.  Additionally it includes operations to management the Localstack and Postgres development infrastructure.
+'localtools.sh' starts the Python virual environment and sets alias's to bring deployments up and down.  Additionally it includes alias's to management the Localstack and Postgres development infrastructure.
 
 ```bash
 # devtools.sh
 
 # api operations
-alias up="pulumi up --yes --stack local"
-alias down="pulumi destroy --yes --stack local"
-
-# import playground commands
-source "~/workspace/localstack_playground/devtools.sh"
+alias up="pulumilocal up --yes --stack local"
+alias down="pulumilocal destroy --yes --stack local"
 
 # playground operations
-alias infra_up="playground_postgres"
-alias infra_down="playground_down"
-alias infra_reset="playground_reset"
+alias infra_up="playground postgres; postgres_secret"
+alias infra_down="playground down"
+alias infra_reset="playground reset"
+
 ```
 
 Install the tools using;
@@ -184,11 +186,11 @@ When resetting the Localstack playground this secret will be removed, and will n
 # devtools.sh
 
 # api operations
+# devtools.sh
+
+# api operations
 alias up="pulumilocal up --yes --stack local"
 alias down="pulumilocal destroy --yes --stack local"
-
-# Import playground commands
-source "${HOME}/workspace/localstack_playground/devtools.sh"
 
 alias postgres_secret="install_secret --secret-name \"postgres/chinook\" \
   --engine postgres \
@@ -199,76 +201,86 @@ alias postgres_secret="install_secret --secret-name \"postgres/chinook\" \
   --schema public"
 
 # playground operations
-alias infra_up="playground_postgres; postgres_secret"
-alias infra_down="playground_down"
-alias infra_reset="playground_reset"
+alias infra_up="playground postgres; postgres_secret"
+alias infra_down="playground down"
+alias infra_reset="playground reset"
 ```
 
 This setup ensures that your infrastructure and secrets are configured correctly and efficiently each time you work with your local environment.
 
-
 ## Create the API
 
-Once the API specification and database connection configuration are set up, the next step is to create and deploy the API using Pulumi. This process will involve combining your API specification and AWS secret into a Pulumi component for deployment.
+With the API specification completed and the database connection secret configured, the next step is to deploy the API using Pulumi.
 
+You define the `APIFoundry` component in your Pulumi code, typically within the `__main__.py` file. The `APIFoundry` component is a Pulumi `ComponentResource`, so it should be handled like any other component.
 
-## Dev Playground
+There are two key properties to set in the deployment:
 
-The Dev Playground is a docker compose file that sets up both Localstack and a collection of databases running in Docker.  The playground provides a local environment where API-Foundry deployments can be made.
+* **api_spec**: The file path to the API specification created earlier.
+* **secrets**: A JSON mapping of database names to their corresponding secret names. Ensure all databases specified with the `x-af-database` attribute in the API specification are included in this map to correctly associate resources with database connections.
 
-The Dev Playground runs with Postgres, Oracle, and MySQL databases and they are initialized with the Chinook open source database.
+> When deploying to AWS an connecting to RDS databases a VPC configuration will also be required.
 
-The playground must be running when making local deployments and using the Chinook example databases.
+Below is the deployment code for the Chinook API:
 
-**Start Playground**
+```python
+# __main__.py
+import json
+from api_foundry.iac.pulumi.api_foundry import APIFoundry
 
-To start the playground run;
-
-```bash
-playground_up
+api_foundry = APIFoundry(
+    "chinook_postgres",
+    props={
+        "api_spec": "./chinook_api.yaml",
+        "secrets": json.dumps({"chinook": "postgres/chinook"}),
+    },
+)
 ```
 
-Individual databases can be started with;
+With the `APIFoundry` component defined, you can now deploy to Localstack using the `up` ('pulumilocal up -y') command.
+
+> Complete documentation on implementing API specifications can be found at [Building An API Definition](https://github.com/DanRepik/api_foundry?tab=readme-ov-file#building-an-api-definition)
+
+## Deploy the API to Localstack
+
+With `devtools.sh` sourced in your terminal, you can manage the Localstack environment using these commands:
+
+- **infra_up**: Starts the Localstack and Postgres containers, and installs the Chinook database secret.
+- **infra_reset**: Removes the containers and associated data volumes, along with all resources deployed to Localstack, including secrets.
+- **infra_down**: Stops the containers but keeps the data volumes intact.
+
+For handling deployments, the following commands are available:
+
+- **up**: Deploys the API, and can be run multiple times to update the deployment.
+- **down**: Removes the deployment.
+
+The typical development workflow is:
+
+1. Start the infrastructure with `infra_up`.
+2. Deploy and iterate with `up`.
+3. Reset the environment as needed using `infra_reset`.
+
+Once the deployment is complete the API can excerised using curl.  For Localstack you will need to build the URL using the following;
 
 ```bash
-playground_postgres
-playground_oracle
-playground_mysql
+http://{GATEWAY_API}.execute-api.localhost.localstack.cloud:4566/{api_name}"
+```
+
+Where;
+
+* gateway_api is an output by the Pulumi deployment.
+* api_name is the name of the Pulumi APIFoundry component.
+
+
+For example;
+
+```bash
+export GATEWAY_API=y8w7zajvlp
+export API_NAME=chinook_postgres
+export GATEWAY_URL=http://${GATEWAY_API}.execute-api.localhost.localstack.cloud:4566/${API_NAME}
 ```
 
 
-**Stop the Playground**
+## Sending a Request
 
-To stop the playground run;
-
-```bash
-playground_down
-```
-
-**Reset the Playground**
-
-Reset allows restoring the databases back to their original state.
-
-```bash
-playground_reset
-```
-
-Resetting the database shuts down all playground containers and removes the database volumes.
-
-# Running an Example Deployment
-
-**Deploy to the Playground**
-
-To make a deployment run;
-
-```bash
-up
-```
-
-**Destory a Deployment**
-
-To destroy a deployment run;
-
-```bash
-down
-```
+Once 

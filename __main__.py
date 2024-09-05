@@ -1,10 +1,12 @@
-"""An AWS Python Pulumi program"""
+# __main__.py
+import json
 
-import pulumi
-from pulumi_aws import s3
+from api_foundry.iac.pulumi.api_foundry import APIFoundry
 
-# Create an AWS resource (S3 Bucket)
-bucket = s3.Bucket('my-bucket')
-
-# Export the name of the bucket
-pulumi.export('bucket_name', bucket.id)
+api_foundry = APIFoundry(
+    "chinook_postgres",
+    props={
+        "api_spec": "./chinook_api.yaml",
+        "secrets": json.dumps({"chinook": "postgres/chinook"}),
+    },
+)
