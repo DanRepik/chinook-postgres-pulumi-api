@@ -31,10 +31,13 @@ def get_stack_output_value(stack_name: str, work_dir: str, output_name: str):
     return outputs[output_name].value if output_name in outputs else None
 
 
+api_id: str = None
 @pytest.fixture
 def gateway_endpoint():
     log.info("gateway endpoint")
-    api_id = get_stack_output_value("local", ".", "gateway-api")
+    global api_id
+    if not api_id:
+        api_id = get_stack_output_value("local", ".", "gateway-api")
     return (
         f"http://{api_id}.execute-api.localhost.localstack.cloud:4566/chinook_postgres"
     )

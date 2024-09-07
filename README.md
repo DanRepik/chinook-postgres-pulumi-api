@@ -260,27 +260,39 @@ The typical development workflow is:
 2. Deploy and iterate with `up`.
 3. Reset the environment as needed using `infra_reset`.
 
-Once the deployment is complete the API can excerised using curl.  For Localstack you will need to build the URL using the following;
+
+### Sending a Request
+
+Once the deployment to Localstack is complete the API should be operational for testing, A quick viability test of the API can be done using curl. 
+
+For Localstack, construct the API endpoint URL as follows:
 
 ```bash
-http://{GATEWAY_API}.execute-api.localhost.localstack.cloud:4566/{api_name}"
+http://${GATEWAY_API}.execute-api.localhost.localstack.cloud:4566/${API_NAME}
 ```
 
-Where;
+Where:
 
-* gateway_api is an output by the Pulumi deployment.
-* api_name is the name of the Pulumi APIFoundry component.
+- **GATEWAY_API** is an output provided by the Pulumi deployment.
+- **API_NAME** is the name of the Pulumi APIFoundry component.
 
-
-For example;
+For example, set the environment variables to build the endpoint URL:
 
 ```bash
+# This is output from the Pulumi deployment
 export GATEWAY_API=y8w7zajvlp
+
+# This is the name of the APIFoundry component
 export API_NAME=chinook_postgres
+
 export GATEWAY_URL=http://${GATEWAY_API}.execute-api.localhost.localstack.cloud:4566/${API_NAME}
 ```
+Now, you can send requests to the API using the GATEWAY_URL variable:
 
+```bash
+# Get the album with the album_id of 5
+curl ${GATEWAY_URL}/album/5
 
-## Sending a Request
-
-Once 
+# Alternatively, use query parameters
+curl ${GATEWAY_URL}/album?album_id=5
+```
