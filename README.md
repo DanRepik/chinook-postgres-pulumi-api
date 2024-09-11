@@ -296,3 +296,84 @@ curl ${GATEWAY_URL}/album/5
 # Alternatively, use query parameters
 curl ${GATEWAY_URL}/album?album_id=5
 ```
+
+Here's a more concise and structured version of the markdown for testing the API:
+
+---
+
+## Testing the API
+
+Once the API is running, we can automate tests to verify the deployment. First, let's set up a fixture to construct the Localstack request URL, retrieving the gateway ID from the Pulumi stack output.
+
+```python
+# tests/test_fixtures.py
+import pytest
+
+api_id: str = None
+
+@pytest.fixture
+def gateway_endpoint():
+    global api_id
+    if not api_id:
+        from pulumi import automation as auto
+
+        stack = auto.select_stack(stack_name="local", work_dir=".")
+        stack.refresh(on_output=print)
+        outputs = stack.outputs()
+        api_id = outputs.get("gateway-api", {}).get("value")
+    
+    return f"http://{api_id}.execute-api.localhost.localstack.cloud:4566/chinook_postgres"
+```
+
+### Writing Tests
+
+Now that we have the fixture, we can write tests to validate the API functionality. Below are examples for testing both album retrieval and album creation:
+
+```python
+# tests/test_albums.py
+import requests
+import time
+from api_foundry.utils.logger import logger
+from test_fixtures import gateway_endpoint
+
+log = logger(__name__)
+
+def test_get_album_by_id(gateway_endpoint):
+    start = time.perf_counter()
+    response = requests.get(gateway_endpoint + "/album/5")
+    log.info(f"Response time: {time.perf_counter() - start}")
+
+    # Validate the response
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+    albums = response.json()
+    assert len(albums) == 1
+    assert albums[0] == {'album_id': 5, 'artist_id': 3, 'title': 'Big Ones'}
+
+def test_post_request(gateway_endpoint):
+    # send the request
+    start = time.perf_counter()
+    response = requests.post(
+        gateway_endpoint + "/album",
+        json={"artist_id": 120, "title": "Wish You Were Here"},
+    )
+    log.info(f"response time: {time.perf_counter()-start}")
+
+    # Validate the response
+    assert (
+        response.status_code == 200
+    ), f"Expected status code 200, got {response.status_code}"
+    albums = response.json()
+    assert len(albums) == 1
+    assert "album_id" in albums[0]
+    assert albums[0]["artist_id"] == 120
+    assert albums[0]["title"] == "Wish You Were Here"
+```
+
+In these tests:
+- **test_get_album_by_id**: Verifies fetching an album by ID.
+- **test_create_album**: Validates the creation of a new album.
+
+
+## Conclusion
+
+In just a few steps, we've quickly implemented, deployed, and tested a fully functional API using API-Foundry. While the process was streamlined, the result is a production-worthy API that is ready to handle real-world demands. By leveraging automation tools like Pulumi and LocalStack, we ensured that our development workflow remains efficient, enabling continuous testing and refinement. This approach not only accelerates the development process but also provides a reliable foundation for scalable, cloud-based API services.
