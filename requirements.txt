@@ -2,6 +2,7 @@ pulumi>=3.0.0,<4.0.0
 pulumi-aws>=6.0.2,<7.0.0
 pulumi-local
 localstack-playground
-api-foundry
+-e ../api_foundry
+-e ../api_foundry_query_engine
 pytest
 requests

@@ -1,4 +1,4 @@
-name: Chinook-API
+name: chinook-api
 runtime:
   name: python
   options:

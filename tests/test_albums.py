@@ -11,7 +11,8 @@ def test_get_request_all(gateway_endpoint):
     # Define the endpoint
     endpoint = gateway_endpoint + "/album"
 
-    log.info(f"request: {endpoint}")
+    log.info(f"gateway_endpoint: {gateway_endpoint}")
+    log.info(f"endpoint: {endpoint}")
 
     # Send the GET request
     start = time.perf_counter()
