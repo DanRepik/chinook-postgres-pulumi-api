@@ -3,5 +3,8 @@
 	"features": {
 		"ghcr.io/devcontainers-extra/features/pulumi:1": {}
 	},
+	"containerEnv": {
+		"PULUMI_CONFIG_PASSPHRASE": "Xxxxx-Xxxxx"
+	},
 	"postCreateCommand": "./post_create.sh"
 }
