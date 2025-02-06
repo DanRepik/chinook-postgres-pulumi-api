@@ -25,7 +25,7 @@ def gateway_endpoint():
             log.info(f"outputs: {outputs}")
             
             # Extract the desired output
-            api_id = outputs["chinook-rest-api-host"]
+            api_id = outputs["chinook-host"]
             log.info(f"api_id: {api_id}")
             
         except subprocess.CalledProcessError as e:

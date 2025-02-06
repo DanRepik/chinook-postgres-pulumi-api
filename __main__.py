@@ -1,7 +1,7 @@
 # __main__.py
 import json
 
-from api_foundry.iac.pulumi.api_foundry import APIFoundry
+from api_foundry import APIFoundry
 
 api_foundry = APIFoundry(
     "chinook",
